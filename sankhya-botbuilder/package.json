@@ -1,0 +1,15 @@
+{
+  "name": "sankhya-botbuilder",
+  "version": "1.0.0",
+  "description": "A minimal end-to-end demo of: - a website wizard that asks what bot you need - generating a setup code - generating an installer command",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "nanoid": "^5.1.6"
+  }
+}
