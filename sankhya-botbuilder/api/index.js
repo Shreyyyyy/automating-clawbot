@@ -30,9 +30,23 @@ function textResponse(text, statusCode = 200, contentType = "text/plain; charset
 }
 
 function readPublicIndex() {
-  // We keep public/index.html in repo root. In Vercel serverless, cwd is project root.
-  const p = path.join(process.cwd(), "public", "index.html");
-  return fs.readFileSync(p, "utf8");
+  // Vercel's project root depends on what you selected as "Root Directory".
+  // Try common locations so we don't crash with 500.
+  const candidates = [
+    path.join(process.cwd(), "public", "index.html"),
+    path.join(process.cwd(), "sankhya-botbuilder", "public", "index.html"),
+  ];
+
+  for (const p of candidates) {
+    try {
+      if (fs.existsSync(p)) return fs.readFileSync(p, "utf8");
+    } catch {}
+  }
+
+  return `<!doctype html><html><body><h2>BotBuilder misconfigured</h2>
+  <p>Could not find <code>public/index.html</code>.</p>
+  <p>Fix: In Vercel project settings, set <b>Root Directory</b> to <code>sankhya-botbuilder</code> and redeploy.</p>
+  </body></html>`;
 }
 
 export default async function handler(req, res) {
