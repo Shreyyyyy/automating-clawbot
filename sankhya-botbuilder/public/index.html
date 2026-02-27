@@ -4,57 +4,135 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>SANKHYA BotBuilder</title>
-  <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; max-width: 820px; margin: 40px auto; padding: 0 16px; }
-    .card { border: 1px solid #eee; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
-    label { font-weight: 700; display:block; margin: 10px 0 6px; }
-    select, input { width: 100%; padding: 10px; }
-    button { padding: 10px 14px; font-weight: 800; }
-    code { display:block; background:#f7f7f7; padding: 10px; border-radius: 10px; overflow-x:auto; }
-    .muted { color:#666; }
-  </style>
+  <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-  <h1>SANKHYA BotBuilder (Demo)</h1>
-  <p class="muted">Pick a bot type. We'll generate a setup code + installer command. This demo avoids asking you for prompts.</p>
+  <div class="container">
+    <div class="header">
+      <div class="brand">
+        <div class="badge"><span class="dot"></span> BotBuilder • OpenClaw Installer</div>
+        <h1>SANKHYA BotBuilder</h1>
+        <p class="subtitle">
+          Build a bot in 60 seconds. Pick the type, enable voice notes, then run one command on the target laptop/VM.
+          No prompt engineering.
+        </p>
+      </div>
+      <div style="min-width: 240px">
+        <div class="card" style="padding:14px">
+          <h2 style="margin-bottom:6px">What you get</h2>
+          <ul class="steps">
+            <li><span class="stepnum">1</span><div><b>Installer</b><div class="small">Linux/macOS + Windows</div></div></li>
+            <li><span class="stepnum">2</span><div><b>OpenClaw setup</b><div class="small">Workspace templates + gateway start</div></div></li>
+            <li><span class="stepnum">3</span><div><b>Phone access</b><div class="small">Guided Tailscale steps</div></div></li>
+          </ul>
+        </div>
+      </div>
+    </div>
 
-  <div class="card">
-    <label>Bot type</label>
-    <select id="botType">
-      <option value="personal">Personal assistant</option>
-      <option value="sales">Sales follow-up bot</option>
-      <option value="support">Customer support bot</option>
-      <option value="hiring">Hiring coordinator bot</option>
-    </select>
+    <div class="grid">
+      <div class="card">
+        <h2>1) Choose your bot</h2>
 
-    <label>Channel</label>
-    <select id="channel">
-      <option value="whatsapp">WhatsApp</option>
-      <option value="telegram">Telegram (later)</option>
-    </select>
+        <div class="row">
+          <div>
+            <label>Bot type</label>
+            <select id="botType">
+              <option value="personal">Personal assistant</option>
+              <option value="sales">Sales follow-up bot</option>
+              <option value="support">Customer support bot</option>
+              <option value="hiring">Hiring coordinator bot</option>
+            </select>
+          </div>
+          <div>
+            <label>Channel</label>
+            <select id="channel">
+              <option value="whatsapp">WhatsApp</option>
+              <option value="telegram">Telegram (later)</option>
+            </select>
+          </div>
+        </div>
 
-    <label>
-      <input type="checkbox" id="voice" /> Enable voice notes (transcription)
-    </label>
+        <label>Voice notes</label>
+        <div class="toggle">
+          <input type="checkbox" id="voice" />
+          <span>Enable voice transcription (faster-whisper, local)</span>
+        </div>
+        <div class="small">If voice is on, the installer will attempt to enable transcription. Some systems may require manual ffmpeg install.</div>
 
-    <button id="create">Create setup</button>
+        <hr />
+
+        <button id="create">Generate installer</button>
+        <div class="small" style="margin-top:10px">
+          Generates a signed setup token (serverless-safe). No database required.
+        </div>
+      </div>
+
+      <div class="card" id="out" style="display:none;">
+        <h2>2) Run this on the target machine</h2>
+        <div class="small">Setup code:</div>
+        <div style="font-weight:900; font-size: 18px; margin: 6px 0 10px" id="code"></div>
+
+        <div class="small">Linux / macOS</div>
+        <div class="codeblock" id="cmdWrap">
+          <button class="copy" data-copy="#cmd">Copy</button>
+          <div id="cmd"></div>
+        </div>
+
+        <div class="small" style="margin-top:12px">Windows (PowerShell)</div>
+        <div class="codeblock" id="cmdWinWrap">
+          <button class="copy" data-copy="#cmdWin">Copy</button>
+          <div id="cmdWin"></div>
+        </div>
+
+        <div class="footer">
+          After install:
+          <br />• Start gateway (installer attempts it): <b>openclaw gateway start</b>
+          <br />• Link WhatsApp: <b>openclaw whatsapp login</b>
+          <br />• For phone access: install Tailscale on laptop + phone.
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Pro tip: For production, set <b>BOTBUILDER_SECRET</b> in your hosting provider env vars.
+    </div>
   </div>
 
-  <div class="card" id="out" style="display:none;">
-    <div><b>Setup code:</b> <span id="code"></span></div>
-    <div class="muted" style="margin-top:10px;">Run this on the laptop where you want the bot:</div>
-    <code id="cmd"></code>
-    <div class="muted" style="margin-top:10px;">Windows:</div>
-    <code id="cmdWin"></code>
-  </div>
+  <div class="toast" id="toast">Copied</div>
 
   <script>
     const out = document.getElementById('out');
     const codeEl = document.getElementById('code');
     const cmdEl = document.getElementById('cmd');
     const cmdWinEl = document.getElementById('cmdWin');
+    const createBtn = document.getElementById('create');
+    const toast = document.getElementById('toast');
 
-    document.getElementById('create').addEventListener('click', async () => {
+    function showToast(text) {
+      toast.textContent = text;
+      toast.style.display = 'block';
+      clearTimeout(window.__t);
+      window.__t = setTimeout(() => toast.style.display = 'none', 1200);
+    }
+
+    async function copySel(sel) {
+      const el = document.querySelector(sel);
+      const text = el?.textContent || '';
+      await navigator.clipboard.writeText(text);
+      showToast('Copied');
+    }
+
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('button.copy');
+      if (!btn) return;
+      const sel = btn.getAttribute('data-copy');
+      if (sel) copySel(sel);
+    });
+
+    createBtn.addEventListener('click', async () => {
+      createBtn.disabled = true;
+      createBtn.textContent = 'Generating…';
+
       const body = {
         botType: document.getElementById('botType').value,
         channel: document.getElementById('channel').value,
@@ -66,11 +144,17 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       });
+
       const j = await r.json();
       codeEl.textContent = j.code;
       cmdEl.textContent = j.installLinuxMac;
       cmdWinEl.textContent = j.installWindows;
       out.style.display = 'block';
+
+      createBtn.disabled = false;
+      createBtn.textContent = 'Generate installer';
+
+      showToast('Installer ready');
     });
   </script>
 </body>
